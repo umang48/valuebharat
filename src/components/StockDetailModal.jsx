@@ -47,12 +47,12 @@ const StockDetailModal = ({ stock, onClose }) => {
           
           {/* Main Chart Column */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-background border border-surfaceBorder rounded-xl p-5 h-80">
+            <div className="bg-background border border-surfaceBorder rounded-xl p-5">
               <h3 className="text-sm font-semibold text-textSecondary mb-4 flex items-center">
                 <BarChart3 className="w-4 h-4 mr-2" />
-                Historical Price Trend
+                Historical Price Trend (Jan – May 2026)
               </h3>
-              <ResponsiveContainer width="100%" height="85%">
+              <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={stock.history}>
                   <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis domain={['auto', 'auto']} stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />

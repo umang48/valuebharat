@@ -7,83 +7,78 @@ export function useStocks() {
 
   useEffect(() => {
     let isMounted = true;
-    
-    const fetchLivePrices = async () => {
-      setLoadingPrices(true);
-      let currentStocks = [...mockStocks];
-      
+
+    // Detect environment: use PHP proxy in production, skip live fetch in dev
+    const isProduction = window.location.hostname !== 'localhost' && 
+                         window.location.hostname !== '127.0.0.1';
+
+    const fetchPrice = async (ticker) => {
       try {
-        const fetchPrice = async (ticker) => {
-          try {
-            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}.NS`;
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (!data.contents) return null;
-            const parsed = JSON.parse(data.contents);
-            return parsed.chart.result[0].meta.regularMarketPrice;
-          } catch (error) {
-            console.error(`Failed to fetch ${ticker}:`, error);
-            return null;
-          }
-        };
-
-        // Fetch in very small batches with delays to prevent proxy 522/429 errors
-        const batchSize = 2;
-        
-        for (let i = 0; i < currentStocks.length; i += batchSize) {
-          if (!isMounted) break;
-          
-          const batch = currentStocks.slice(i, i + batchSize);
-          const promises = batch.map(async (stock) => {
-            const livePrice = await fetchPrice(stock.ticker);
-            if (livePrice) {
-              return {
-                ...stock,
-                price: livePrice,
-                history: [
-                  ...stock.history.slice(0, -1),
-                  { ...stock.history[stock.history.length - 1], price: livePrice }
-                ]
-              };
-            }
-            return stock;
-          });
-          
-          const batchResults = await Promise.all(promises);
-          
-          // Merge batch results into current stocks
-          currentStocks = currentStocks.map(stock => {
-            const updated = batchResults.find(r => r.ticker === stock.ticker);
-            return updated || stock;
-          });
-
-          // Update state progressively so UI feels alive
-          if (isMounted) {
-            setStocks([...currentStocks]);
-          }
-          
-          // Wait 1 second before next batch to respect proxy rate limits
-          if (i + batchSize < currentStocks.length) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching live prices", error);
-      } finally {
-        if (isMounted) setLoadingPrices(false);
+        // PHP proxy on same domain — zero CORS issues, works in production
+        const proxyUrl = `/proxy.php?ticker=${encodeURIComponent(ticker)}`;
+        const response = await fetch(proxyUrl);
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.price || null;
+      } catch {
+        return null;
       }
     };
 
+    const fetchLivePrices = async () => {
+      if (!isMounted) return;
+      setLoadingPrices(true);
+
+      // In development, skip live fetch — just show mockData prices
+      if (!isProduction) {
+        if (isMounted) setLoadingPrices(false);
+        return;
+      }
+
+      let currentStocks = [...mockStocks];
+
+      for (let i = 0; i < currentStocks.length; i++) {
+        if (!isMounted) break;
+
+        const stock = currentStocks[i];
+        const livePrice = await fetchPrice(stock.ticker);
+
+        if (livePrice && livePrice > 0) {
+          currentStocks = currentStocks.map(s =>
+            s.ticker === stock.ticker
+              ? {
+                  ...s,
+                  price: livePrice,
+                  history: [
+                    ...s.history.slice(0, -1),
+                    { ...s.history[s.history.length - 1], price: livePrice }
+                  ]
+                }
+              : s
+          );
+          // Update state progressively — prices pop in as they load
+          if (isMounted) setStocks([...currentStocks]);
+        }
+
+        // Small delay between requests to avoid overwhelming Yahoo Finance
+        if (i < currentStocks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+      }
+
+      if (isMounted) setLoadingPrices(false);
+    };
+
     fetchLivePrices();
-    
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchLivePrices, 60000);
+
+    // Refresh live prices every 5 minutes on production
+    const interval = isProduction 
+      ? setInterval(fetchLivePrices, 5 * 60 * 1000) 
+      : null;
 
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
   }, []);
 
