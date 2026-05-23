@@ -1,6 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, ArrowDownRight, Activity } from 'lucide-react';
-import { mockStocks } from '../data/mockData';
+import { ArrowUpRight, ArrowDownRight, Activity, Loader2 } from 'lucide-react';
 
 const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(value);
 
@@ -51,8 +50,8 @@ const StockCard = ({ stock, onClick }) => {
   );
 };
 
-const Dashboard = ({ onSelectStock, searchQuery }) => {
-  const filteredStocks = mockStocks.filter(stock => 
+const Dashboard = ({ stocks, onSelectStock, searchQuery, loadingPrices }) => {
+  const filteredStocks = stocks.filter(stock => 
     stock.ticker.toLowerCase().includes(searchQuery.toLowerCase()) || 
     stock.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -64,9 +63,12 @@ const Dashboard = ({ onSelectStock, searchQuery }) => {
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-12 animate-in fade-in duration-500">
       
       <section>
-        <div className="flex items-center mb-6">
-          <div className="w-1.5 h-6 bg-primary rounded-full mr-3"></div>
-          <h2 className="text-2xl font-bold text-textPrimary">Fundamental Picks of the Day</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="w-1.5 h-6 bg-primary rounded-full mr-3"></div>
+            <h2 className="text-2xl font-bold text-textPrimary">Fundamental Picks of the Day</h2>
+          </div>
+          {loadingPrices && <div className="flex items-center text-sm text-textSecondary"><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Live prices...</div>}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {fundamentalPicks.map(stock => (

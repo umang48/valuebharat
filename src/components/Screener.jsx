@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import DataTable from './DataTable';
-import { SlidersHorizontal, RefreshCcw } from 'lucide-react';
-import { mockStocks } from '../data/mockData';
+import { SlidersHorizontal, RefreshCcw, Loader2 } from 'lucide-react';
 
-const Screener = ({ onSelectStock, searchQuery }) => {
+const Screener = ({ stocks, onSelectStock, searchQuery, loadingPrices }) => {
   const [filters, setFilters] = useState({
     sector: 'All',
     marketCap: 'All',
@@ -29,7 +28,7 @@ const Screener = ({ onSelectStock, searchQuery }) => {
     });
   };
 
-  const filteredData = mockStocks.filter(stock => {
+  const filteredData = stocks.filter(stock => {
     const matchesSearch = stock.ticker.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           stock.name.toLowerCase().includes(searchQuery.toLowerCase());
     return (
@@ -54,9 +53,12 @@ const Screener = ({ onSelectStock, searchQuery }) => {
               <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
               Filters
             </h2>
-            <button onClick={resetFilters} className="text-textSecondary hover:text-primary transition-colors">
-              <RefreshCcw className="w-4 h-4" />
-            </button>
+            <div className="flex items-center space-x-3">
+              {loadingPrices && <Loader2 className="w-4 h-4 text-textSecondary animate-spin" />}
+              <button onClick={resetFilters} className="text-textSecondary hover:text-primary transition-colors">
+                <RefreshCcw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -65,7 +67,7 @@ const Screener = ({ onSelectStock, searchQuery }) => {
               <label className="block text-sm font-medium text-textSecondary mb-2">Sector</label>
               <select name="sector" value={filters.sector} onChange={handleFilterChange} className="w-full bg-background border border-surfaceBorder rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none">
                 <option value="All">All Sectors</option>
-                {[...new Set(mockStocks.map(s => s.sector))].sort().map(sector => (
+                {[...new Set(stocks.map(s => s.sector))].sort().map(sector => (
                   <option key={sector} value={sector}>{sector}</option>
                 ))}
               </select>
